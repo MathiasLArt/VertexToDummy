@@ -1,9 +1,9 @@
 import bpy
-import math
 
 class AddEmptyToVerticesOperator(bpy.types.Operator):
     bl_idname = "object.add_empty_to_vertices"
     bl_label = "Add Empty to Selected Vertices"
+    bl_options = {'UNDO'}
 
     empty_type: bpy.props.EnumProperty(
         items=[
