@@ -31,23 +31,15 @@ class AddEmptyToVerticesOperator(bpy.types.Operator):
         default="Empty_"
     )
 
+    align_with_normal: bpy.props.BoolProperty(
+        name="Align with Vertex Normal",
+        description="Align the empty with the vertex normal",
+        default=False
+    )
+
     def calculate_vertex_normal(self, obj, vertex):
-        # Store the original vertex selection and deselect all
-        original_selection = [v.select for v in obj.data.vertices]
-        for v in obj.data.vertices:
-            v.select = False
-
-        # Select the current vertex
-        vertex.select = True
-
-        # Get the normal of the selected vertex
-        vertex_normal = vertex.normal
-
-        # Restore the original vertex selection
-        for v, selected in zip(obj.data.vertices, original_selection):
-            v.select = selected
-
-        return vertex_normal
+        # Get the normalized normal of the vertex
+        return vertex.normal.normalized()
 
     def execute(self, context):
         # Get the active object (assumes it's a mesh)
@@ -77,12 +69,15 @@ class AddEmptyToVerticesOperator(bpy.types.Operator):
             new_empty.name = empty_name
             empty_counter += 1
 
-            # Calculate vertex normal for the current vertex
-            vertex_normal = self.calculate_vertex_normal(obj, vert)
+            if self.align_with_normal:
+                # Calculate vertex normal for the current vertex
+                vertex_normal = self.calculate_vertex_normal(obj, vert)
 
-            # Calculate the rotation matrix to align the empty with the vertex normal
-            align_matrix = vertex_normal.to_track_quat('Z', 'Y').to_matrix().to_4x4()
-            new_empty.matrix_world = align_matrix @ new_empty.matrix_world
+                # Calculate the rotation quaternion to align the empty with the vertex normal
+                rot_quaternion = vertex_normal.to_track_quat('Z', 'Y')
+
+                # Apply the rotation to the empty object
+                new_empty.rotation_euler = rot_quaternion.to_euler()
 
         return {'FINISHED'}
     
@@ -95,8 +90,8 @@ def register():
 def unregister():
     bpy.utils.unregister_class(AddEmptyToVerticesOperator)
 
-#if __name__ == "__main__":
+# Register the operator
 register()
 
-# Execute the operator directly
-bpy.ops.object.add_empty_to_vertices()
+# Execute the operator with default values
+bpy.ops.object.add_empty_to_vertices('INVOKE_DEFAULT')
